@@ -53,8 +53,10 @@
 </template>
 
 <script>
-import { validUsername } from '@/utils/validate'
 
+import { validUsername } from '@/utils/validate'
+import axios from 'axios'
+import MyAes from '@/utils/myAes.js'
 export default {
   name: 'Login',
   data() {
@@ -108,12 +110,28 @@ export default {
     handleLogin() {
       this.$refs.loginForm.validate(valid => {
         if (valid) {
-          this.loading = true
-          this.$store.dispatch('user/login', this.loginForm).then(() => {
-            this.$router.push({ path: this.redirect || '/' })
-            this.loading = false
-          }).catch(() => {
-            this.loading = false
+          var value = MyAes.encrypt(this.loginForm.password, 'communication123.')
+          var sendvalue = {
+            loginName: this.loginForm.username,
+            password: value
+          }
+          this.$axios.post('/api-base/login', sendvalue).then(res => {
+            if(res.data.status == 'success'){
+              //登录成功,将用户信息存入localstorage
+              window.localStorage.setItem('token',res.data.data.token)
+              window.localStorage.setItem('loginName',res.data.data.loginName)
+              //原系统写的 不加上跳转不成功
+              this.$store
+                .dispatch("user/login", {
+                  username: "admin",
+                  password: "111111111"
+                })
+                .then(() => {
+                  this.$router.push({ path: "/" });
+                })
+                .catch(() => {});
+
+            }
           })
         } else {
           console.log('error submit!!')
